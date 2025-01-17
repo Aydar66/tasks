@@ -151,22 +151,13 @@ def func(lst):
     return res
 
 -------------------------------------------------------
-Задача №5 --надо проверить с Ильей
-
--- без аномалий 
-select
-    id,
-    adr,
-    dt
-from ATM
-where dt < '2023-01-01 00:00:00' and dt = first_value(dt) over(partition by id order by dt desc)
-
--- с аномалиями
+Задача №5
 with t as (
     select
         id,
         adr,
-        min(dt) as dt
+        dt,
+        ROW_NUMBER() OVER (PARTITION BY id ORDER BY dt DESC) as row_num
     from ATM
     where dt < '2023-01-01 00:00:00'
     group by id, adr)
@@ -175,7 +166,7 @@ select
     adr,
     dt
 from t
-where dt = first_value(dt) over(partition by id order by dt desc)
+where row_num = 1
 
 -------------------------------------------------------
 Задача №6

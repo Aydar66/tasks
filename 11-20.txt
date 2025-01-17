@@ -109,18 +109,13 @@ join documents d
 on d.client_id = cl.client_id
 where valid_to = '2220-01-01'
 
--- Задача 3 -- уточнить, правильно ли такое решение?
-with t as (
-    select
-        cl.client_id,
-        first_value(d.valid_to) over(partiotion by cl.client_id order by d.valid_to desc) as last_date
-    from clients cl
-    left join documents d
-    on cl.client_id = d.client_id)
+-- Задача 3
 select
     cl.client_id
-from t
-where last_date != '2220-01-01' or last_date is NULL
+from clients cl
+left join documents d
+on cl.client_id = d.client_id and d.valid_to = '2220-01-01'
+where d.client_id is null
 
 -- Задача 4
 select
@@ -174,7 +169,7 @@ where video_id between 1 and 3
 group by user_id
 having sum(video_id) = 4
 
--- Задача 3 Python -- ДОРЕШАТЬ/ДОПОНЯТЬ
+-- Задача 3 Python
 def f(s):
     i = 0
     n = len(s)
