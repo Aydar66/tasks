@@ -1,0 +1,469 @@
+Задача №1
+
+-- 1 задача SQL
+5
+7
+3
+4
+
+19, 4, 4, 4, 7, 3
+
+-- задача 2 SQL
+select
+    dt,
+    count,
+    round((count*100.0)/lag(count) over(order by dt rows between 1 preceding and current row)-100, 2) as prcnt_growth
+from
+    (select
+        date_trunc('month', created_at)::date as dt,
+        count(title) as count
+    from data
+    group by date_trunc('month', created_at)::date) as t
+order by dt
+
+
+-------------------------------------------------------------------
+
+Задача №2
+
+-- Задача 1 SQL
+inner join - 2 записи
+left join - 3 записи
+full join - 5 записей
+
+-- Задача 2 SQL
+select distinct
+from
+where
+group by
+having
+order by
+limit
+offset
+union
+
+-- Задача 3 SQL
+select
+    good_id,
+    inventory_dt,
+    abs(change) as inventory_cnt
+from
+    (select
+        good_id,
+        inventory_dt,
+        inventory_cnt,
+        inventory_cnt - lag(inventory_cnt) over(partition by good_id order by inventory_dt) as change
+    from inventory) t
+where change != 0
+
+-- Задача 4 PYTHON
+lst = [...]
+-- RGB
+-- упорядочено
+
+
+lst = ['black', 'blue', 'green', 'grey', 'red', 'rose']
+def func(lst):
+    
+    res = []
+    
+    for letter in "rgb":
+        temp = []
+        for word in lst:
+            if word.startswith(letter):
+                temp.append(word)
+        temp.sort()
+        res += temp
+        temp = []
+    
+    return res
+
+-------------------------------------------------------
+
+
+Задача №3
+
+-- Задача 2 SQL
+with t as 
+    (select
+        user_id,
+        date_trunc(date, 'month') as dt
+    from logins
+    group by 1, 2)
+select
+    cur.dt,
+    count(cur.user_id) as month_retention
+from t cur
+join t prev
+on cur.user_id = prev.user_id and cur.dt - interval '1 month' == prev.dt
+group by cur.dt
+order by cur.dt
+
+-------------------------------------------------------
+
+Задача №4
+
+-- Задача 2
+with t as
+    (select
+        product_id,
+        ds
+    from fact_purchases
+    where date_trunc(ds, 'month') == '2023-05-01'),
+    t2 as (
+    select distinct
+        product_id,
+        first_value(ds) over(partition by product_id order by ds) as first_purchase_date,
+        first_value(ds) over(partition by product_id order by ds desc) as last_purchase_date
+    from t)
+select
+    product_id
+from t2
+where first_purchase_date != last_purchase_date
+order by product_id, last_purchase_date
+
+-- Задача 3
+select
+    user_id
+from
+    (select
+        user_id,
+        date_trunc('month', order_date) as month,
+        count(*) as cnt
+    from orders
+    group by user_id, date_trunc(order_date, 'month')) t
+where cnt = 6
+
+-- Задача 4
+def func(lst):
+    d = {}
+    for i in lst:
+        if i not in:
+            d[i] = 1
+        
+        d[i] +=1
+    
+    res = 0
+    
+    for key, value in d.items():
+        res += value//2
+    
+    return res
+
+-------------------------------------------------------
+Задача №5 --надо проверить с Ильей
+
+-- без аномалий 
+select
+    id,
+    adr,
+    dt
+from ATM
+where dt < '2023-01-01 00:00:00' and dt = first_value(dt) over(partition by id order by dt desc)
+
+-- с аномалиями
+with t as (
+    select
+        id,
+        adr,
+        min(dt) as dt
+    from ATM
+    where dt < '2023-01-01 00:00:00'
+    group by id, adr)
+select
+    id,
+    adr,
+    dt
+from t
+where dt = first_value(dt) over(partition by id order by dt desc)
+
+-------------------------------------------------------
+Задача №6
+
+-- Задача 1 SQL
+-- названия категорий
+-- условия - средняя залоговоая стоимость > 5000
+select
+    cat.name
+from category cat
+join article art
+on cat.id = art.category_id
+group by cat.name
+having avg(deposit_price) > 5000
+
+-- Задача 2 SQL
+-- есть ли артикулы, у которых не указана категория
+select
+    art.id
+from article art
+left join category cat
+on art.category_id = cat.id
+where cat.id is null
+
+-- Задача 3 SQL
+-- Последние 3 взятые предмета для каждого юзера
+with oplog as (
+    select
+        user_id,
+        instance_id,
+        row_number() over(partition by user_id order by date_borrowed desc) as rnk
+    from Operation_Log)
+select
+    ol.user_id,
+    ins.inventory_number
+from oplog ol
+join instance ins
+on ol.instance_id = ins.id
+where ol.rnk <= 3
+
+-- Задача 4 SQL
+-- Артикулы, которые никогда не брали в летние месяцы
+with t as 
+    (select
+        article_id
+    from instance ins
+    join (select distinct instance_id from Operation_Log where date_part('month', date_borrowed) in (6,7,8)) ol
+    on ol.instance_id = ins.id)
+select
+    a.id
+from article a
+left join t on t.article_id = a.id
+where t.article_id is null
+
+
+-------------------------------------------------------
+Задача №7
+
+-- Задача 1 SQl
+
+-- product name
+-- кол-во заказов на продукт
+-- сумма заказов на продукт
+-- ранг товара в кол-ве заказов (больше заказов - выше ранг)
+-- сортирова по убыванию кол-ва заказов
+with t as (
+    select
+        pr.productname,
+        count(o.productid) as Count,
+        min(p.price) * count(o.productid) as TotalAmount
+    from products pr
+    left join orders o
+    on pr.product_id = o.product_id
+    group by pr.productname)
+select
+    productname,
+    Count,
+    TotalAmount,
+    dense_rank() over(order by Count desc) as rnk
+from t
+order by Count desc
+
+-- Задача 2 PYTHON
+def f(str):
+    res = 1
+    ans = 1
+    letter = s[0]
+    
+    for l in s[1:]:
+        if l == letter:
+            res+=1
+        else:
+            if res > ans:
+                ans = res
+            res = 1
+            letter = l
+    
+    return ans
+
+-------------------------------------------------------
+Задача №8
+
+-- Задача 1 SQL
+-- 1 пункт
+select
+    transaction_date,
+    sum(transaction_sum)
+from money
+group by transaction_date
+
+-- 2 пункт
+with t as
+    (select
+        transaction_date,
+        sum(transaction_sum) as amount
+    from money
+    group by transaction_date)
+select
+    transaction_date,
+    sum(amount) over(order by transaction_date) as cumulative_amount
+from t
+
+-- 3 пункт
+with t as
+    (select
+        transaction_date,
+        sum(transaction_sum) as amount
+    from money
+    group by transaction_date)
+select
+    transaction_date,
+    (select sum(amount) from t) as total_amount
+    amount as daily_amount,
+from t
+
+-- Задача 2 PYTHON
+def f(lst1, lst2):
+    lst = set(lst2)
+    res = [i for i in lst1 if i not in lst]
+    return res
+
+-------------------------------------------------------
+Задача №9
+
+-- Задача 1 SQL
+with users as (
+    select
+        customer_id
+    from transaction
+    where success_flg is True
+    group by customer_id
+    having sum(amount_rur) > 100000),
+    t as (
+    select
+        transaction_id,
+        customer_id,
+        amount_rur,
+        transaction_dttm,
+        row_number() over(partition by customer_id order by transaction_dttm) as rnk
+    from transaction
+    where customer_id in users and success_flg is True)
+select
+    transaction_id,
+    customer_id,
+    amount_rur,
+    transaction_dttm
+from t
+where rnk = 
+
+-- Задача 2 SQL
+with t as (
+    select
+        transaction_id,
+        lag(amount_rur, 1, 0) over(partition by customer_id order by transaction_dttm) as previous,
+        lead(amount_rur, 1, 0) over(partition by customer_id order by transaction_dttm) as next
+    from transaction)
+select
+    tr.*
+from transcation tr
+join t on tr.transaction_id = t.transaction_id
+where tr.amount_rur > t.previous and tr.amount_rur > t.next
+
+-- Задача 3 SQL - проверить с Ильей
+-- клиенты у которых как минимум один активный счет, открытый больше года назад
+with users_with_year_account as (
+    select
+        cl.name,
+        cl.client_id
+    from account acc
+    join client cl
+    on cl.id = acc.client_id
+    where acc.close_dt is null
+    and current_date - acc.open_dt >= interval '1 year'),
+-- клиенты, совершившие покупки по всем счетам на сумму мене 5000 р. за последний месяц
+    users_with_last_month_transactions as (
+    select
+        cl.name,
+        cl.client_id
+    from transaction tr
+    join account acc
+    on acc.id = tr.account_id
+    join client cl
+    on cl.id = acc.client_id
+    where current_date - tr.transaction_date <= interval '1 month'
+    and tr.type = 'out'
+    group by cl.name
+    having sum(amount) < 5000)
+select
+    ua.name
+from users_with_year_account ua
+join users_with_last_month_transactions ut
+on ua.id = ut.id
+
+-- Задача 4 SQL
+select
+    id,
+    dense_rank() over(order by points desc)
+from competition
+
+select
+    c1.id,
+    c1.points,
+    count(c2.id) as rnk
+from competition t1
+join competition t2
+on t1.id != t2.id and t1.points < t2.points
+group by c1.id, c1.points
+order by rnk 
+
+-- Задача 5 Python
+def f(lst, k):
+    st = 0
+    tail = len(lst) - 1
+    lst.sort()
+
+    while st != tail:
+        if lst[st] + lst[tail] > k:
+            tail -= 1
+        elif lst[st] + lst[tail] < k:
+            st += 1
+        else:
+            return lst[st], lst[tail]
+
+    return None
+
+
+-------------------------------------------------------
+Задача №10
+
+-- Задача 1 SQL
+-- Запрос 1
+1 | 1
+1 | 1
+2 | 2
+2 | 2 
+2 | 2
+2 | 2
+3 | 3
+4 | null
+null | null
+
+-- Запрос 2
+1 | 1
+1 | 1
+2 | 2
+2 | 2 
+2 | 2
+2 | 2
+3 | 3
+
+-- Задача 2 SQL
+with t as (
+    select
+        fio,
+        count(case when mark = 2 then 1 end) as two,
+        count(case when mark=5 then 1 end) as five
+    from journal
+    group by fio)
+select
+    fio,
+    two
+from t
+where five >= 10
+
+-- Задача 3 SQL
+select
+    product,
+    date_from,
+    lead(date_from, 1, to_date('31.12.9999', 'DD.MM.YYYY') - 1 as date_to,
+    price
+from data

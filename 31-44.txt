@@ -1,0 +1,413 @@
+-------------------------------------------------------
+Задача 31
+
+-- Задача 4 SQL
+
+select
+    d.department_id,
+    d.department_name,
+from department_tb d
+left join employee_tb e
+on e.department_id = d.department_id
+group by d.department_id, d.department_name
+having count(distinct employee_id) > 10
+order by count(distinct employee_id) desc, d.department_id asc
+
+
+-------------------------------------------------------
+Задача 32
+
+-- Задача 2 (2 и 5) SQL
+-- Задача: определить количество двоек для каждого ученика у которого 10 и больше пятерок.
+select
+    name,
+    count(case when mark = 5 then 1 end) as a,
+    count(case when mark = 2 then 1 end) as b
+from mark_tb
+where mark = 2 or mark = 5
+group by name
+having count(case when mark = 5 then 1 end) >= 10
+
+-- Задача 3 (Карты) SQL
+-- 1 часть
+select
+    t1.client_id,
+    coalesce(avg(t2.amount), 0) as turnout
+from table_1 t1
+left join table_2 t2
+on t1.card_id = t2.card_id
+where date_trunc(t2.date) = '2024-05-01'
+group by t1.client_id
+
+-- 2 часть
+with t as (
+    select
+        t1.client_id,
+        t1.card_id,
+        coalesce(sum(t2.amount), 0) as spendings
+    from table_1 t1
+    left join table_2 t2
+    on t1.card_id = t2.card_id
+    group by t1.client_id, t1.card_id),
+    t2 as (
+    select
+        client_id,
+        card_id,
+        dense_rank() over(partition by client_id order by spendings desc) as rnk
+    from t)
+select
+    client_id,
+    card_id
+from t2
+where rnk = 1
+
+-- Задача SQL
+select
+    (select min(A) from table1),
+    (select max(A) from table1),
+    (select min(B) from table2),
+    (select max(B) from table2)
+
+with t1 as (
+    select
+        min(A) as a_min,
+        max(A) as a_max
+    from table1),
+    t2 as (
+    select
+        min(B) as b_min,
+        max(B) as b_max
+    from table2)
+select
+    a_min,
+    a_max,
+    b_min,
+    b_max
+from t1
+cross join t2
+
+
+-- Задача SQL из длинной таблицы в широкую
+with temp as (
+    select
+        customer_rk,
+        report_dt,
+        case
+            when MCC_GROUP_CD = 'Супермаркеты' then TRANSACTION_RUR_AMT
+            else 0
+        end as supermarket,
+        case
+            when MCC_GROUP_CD = 'Кафе и рестораны' then TRANSACTION_RUR_AMT
+            else 0
+        end as restaurant
+        case
+            when MCC_GROUP_CD = 'АЗС' then TRANSACTION_RUR_AMT
+            else 0
+        end as fuel
+    from t)
+select
+    customer_rk,
+    report_dt,
+    sum(supermarket) as TR_SMARKET_RUR_AMT,
+    sum(restaurant) as TR_RESTAURANT_RUR_AMT,
+    sum(fuel) as TR_FUEL_RUR_AMT
+from temp
+group by customer_rk, report_dt
+
+-- Задача PYTHON
+-- Наспиать программу для определения правильности скобочной последовотельности
+
+
+-- Посмотрел решение
+def f(s):
+    left = ['(', '[', '{']
+    right = [')', ']', '}']
+    comp = dict(zip(left, right))
+    queue = []
+
+    for elm in s:
+        if elm in left:
+            queue.append(comp[elm])
+        elif not queue or queue.pop() != elm:
+            return False
+
+    return not queue
+    
+---------------------------------------------------------
+Задача 33
+
+-- Задача 1 SQL
+select
+    t1.name,
+    t1.id
+from t1
+left join t2
+on t1.id = t2.id
+
+1 a
+2 b
+3 c
+null dg
+count(1) = count(*) = 4
+
+
+---------------------------------------------------------
+Задача 35
+
+-- Задача 5 SQL
+-- Решал исходя из топ-5 продаж за все время
+with category_product as
+    (select
+        category,
+        product,
+        sum(revenue) as amount
+    from sales
+    group by 1, 2),
+    ranked as (
+    select
+        product,
+        dense_rank() over(partition by category order by amount DESC) as rnk
+    from category_product)
+select
+    date_trunc('month', date) as month,
+    category,
+    product,
+    sum(revenue)
+from sales
+where product in (select product from ranked where rnk <= 5)
+group by 1,2,3
+
+-- топ исходя из продаж за месяц
+with agg_by_month_product as (
+    select
+        date_trunc('month', date) as month,
+        category,
+        product,
+        sum(revenue) as amount
+    from sales
+    group by 1,2,3),
+    ranked as (
+    select
+        month,
+        category,
+        product,
+        amount,
+        dense_rank() over(partition by category, month order by amount desc) as rnk
+    from agg_by_month_product)
+select
+    month,
+    category,
+    product,
+    amount
+from ranked
+where rnk <=5
+order by month, category, amount desc
+
+
+---------------------------------------------------------
+Задача 37
+
+-- Задача 2 SQL
+select
+    employee_id
+from t
+where date_trunc('year', date_start) = '2024-01-01'
+group by employee_id
+having count(distinct date_start) >= 2
+
+-- Задача 3 SQL
+select
+    sum_val
+from t
+where t_date = (select max(t_date) from t where t_date <= 'our_date' and account_id = 'our_account_id')
+and account_id = 'our_account_id'
+
+
+---------------------------------------------------------
+Задача 38
+
+-- inner join
+a | b
+1 | 1
+1 | 1
+2 | 2
+2 | 2
+2 | 2
+2 | 2
+4 | 4
+
+-- left join
+a | b
+1 | 1
+1 | 1
+2 | 2
+2 | 2
+2 | 2
+2 | 2
+null | null
+4 | 4
+5 | null
+null | null
+
+-- right join
+a | b
+1 | 1
+1 | 1
+2 | 2
+2 | 2
+2 | 2
+2 | 2
+4 | 4
+null | 3
+null | null
+
+-- full join
+a | b
+1 | 1
+1 | 1
+2 | 2
+2 | 2
+2 | 2
+2 | 2
+4 | 4
+null | null
+5 | null
+null | null
+null | 3
+null | null
+
+
+---------------------------------------------------------
+Задача 39
+
+-- Задача 1 SQL
+select
+    name
+from Passenger
+where length(name) = (select max(length(name)) from Passenger)
+
+-- Задача 2 SQL
+select
+    count(st.student)
+from student_in_class st
+join class cl on cl.id = st.class
+where cl.name = '10 В'
+
+
+---------------------------------------------------------
+Задача 40
+-- без where 
+min - 5, max = 20
+-- с where
+min - 0, max = 5
+
+
+---------------------------------------------------------
+Задача 41 -- нужно проверить
+
+-- Через JOIN
+select distinct
+    o1.customer_name
+from orders o1
+left join orders o2
+on o1.customer_name = o2.customer_name
+and o2.prod_name = 'Airpods'
+where o1.prod_name = 'iPhone'
+and o2.prod_name is null
+
+-- не через JOIN
+with airpods as (
+    select distinct
+        customer_name
+    from orders
+    where prod_name = 'Airpods')
+select distinct
+    customer_name
+from orders
+where prod_name = 'iPhone'
+and customer_name not in airpods
+
+
+---------------------------------------------------------
+Задача 42
+
+-- Задача SQL
+with sales_per_channel as (
+    select
+        c.channel,
+        sum(p.gross_price * s.sold_quantity) as gross_sales
+    from dim_customer c
+    join fact_sales_monthly as s
+    on c.customer_code = s.customer_code
+    join dim_gross_price p
+    on p.product_code = s.product_code and p.fiscal_year = s.fiscal_year
+    where s.fiscal_year = 2021
+    group by c.channel)
+select
+    channel,
+    round(gross_sales*1.0/1000000,2) as gross_sales_mln,
+    round(gross_sales*100.0/sum(gross_sales) over(),1) as percentage
+from sales_per_channel
+
+
+---------------------------------------------------------
+Задача 43
+
+-- Задача 2 SQL
+select
+    *
+from t
+where (date_from < '2019-03-01' and date_to > '2021-03-01')
+or (date_from > '2019-03-01' and date_to > '2021-03-01')
+or (date_from < '2019-03-01' and date_to < '2021-03-01')
+
+-- Задача 3 SQL
+with t as (
+    select
+        *,
+        dense_rank() over(partition by id order by raw_dt desc) as rnk
+    from abnt)
+select
+    *
+from t
+where rnk = 1
+
+-- Задача 4 SQL
+select
+    p.prod_cat,
+    sum(price*cnt) as total_amt
+from product p
+left join sale s
+on s.prod_nm = p.prod_nm
+and s.sale_dt between p.eff_dt and p.exp_dt
+group by p.prod_cat
+
+-- Задача 5 SQL -- посмотрел подсказу
+with t as (
+    select
+        row_number() over() as id,
+        color
+    from a)
+select
+    t1.color,
+    t2.color
+from t t1
+join t t2
+on t1.id < t2.id
+
+
+---------------------------------------------------------
+Задача 44
+
+-- Задача 1 PYTHON
+def f(list_a, list_b):
+    set_a = set(list_a)
+    set_b = set(list_b)
+    
+    res = [a for a in set_a if a in set_b]
+    
+    return res
+
+-- Задача 2 PYTHON
+def uniq(lst):
+    return list(set(lst))

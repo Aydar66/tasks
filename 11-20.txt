@@ -1,0 +1,359 @@
+-------------------------------------------------------
+Задача №11
+-- Задача 1 SQL
+select
+    width,
+    height,
+    depth,
+    2 * (a*b + a*c + b*c) as area,
+    a*b*c as volume
+from box
+order by area, volume, width, height
+
+-- Задача 2 SQL
+select
+    distance_to_pump <= (fuel_left * mpg)
+from zerofuel
+
+-- Задача 3 SQL - нифига не понял условие задачи
+with t as (
+    select
+        employee_id,
+        attendance_date,
+        date_part('dow', attendance_date) as day_of_week
+    from employee_attendance
+    where date_part('year', attendance_date) = 2023),
+    t1 as (
+    select
+        employee_id,
+        day_of_week,
+        lead(day_of_week) over(partition by employee_id order by attendance_date) as next_day_of_week
+    from t)
+select
+    employee_id,
+    count(case when day_of_week = 6 and next_day_of_week = 0 then 0 else 1) as worked_weekend,
+    sum(count(case when day_of_week = 6 and next_day_of_week = 0 then 0 else 1)) as total
+from t1
+group by employee_id
+
+
+
+-------------------------------------------------------
+Задача №12
+
+-- Задача 1 SQL
+JOIN - max: 12, min: 0
+LEFT JOIN - max: 12, min: 3
+FULL JOIN - max: 12, min 4
+cross join - max, min: 12
+
+-- Задача 2 SQL
+select
+    value,
+    count(value)
+from t
+group by ...
+having count(value) > 1
+
+-- Задаача 3 SQL
+with t as 
+    (select 
+        empl_fio,
+        empl_dep,
+        dense_rank() over(partition by empl_dep order by amount desc) as rnk
+    from salary
+    where date_trunc('month', value_day) = '2023-04-01')
+select
+    empl_fio,
+    empl_dep
+from t
+where rnk = 2
+
+-- Задача 4 SQL -- лучше проверить
+with may_salary as (
+    select
+        empl_fio,
+        amount,
+        dense_rank() over(order by amount) as rnk
+    from salary
+    where date_trunc('month', value_day) = '2023-05-01'),
+    bottom_may_salary as (
+    select
+        empl_fio
+    from may_salary
+    where rnk<=3)
+select
+    empl_fio,
+    sum(case when date_trunc('month', value_day) = '2023-05-01' then amount else 0 end) - sum(case when date_trunc('month', value_day) = '2023-04-01' then amount else 0 end) as diff
+from salary s
+join bottom_may_salary bms
+on bms.empl_fio = s.empl_fio
+group by empl_fio
+
+-------------------------------------------------------
+Задача №13
+
+-- Задача 1 
+select
+    client_fio
+from clients
+where client_type = 'Пенсионер'
+and client_adress not like 'Г.Москва%'
+
+-- Задача 2
+select
+    cl.client_fio,
+    d.document_no
+from clients cl
+join documents d
+on d.client_id = cl.client_id
+where valid_to = '2220-01-01'
+
+-- Задача 3 -- уточнить, правильно ли такое решение?
+with t as (
+    select
+        cl.client_id,
+        first_value(d.valid_to) over(partiotion by cl.client_id order by d.valid_to desc) as last_date
+    from clients cl
+    left join documents d
+    on cl.client_id = d.client_id)
+select
+    cl.client_id
+from t
+where last_date != '2220-01-01' or last_date is NULL
+
+-- Задача 4
+select
+    client_id,
+    valid_to
+from documents
+where valid_to = '2220-01-01'
+group by client_id, valid_to
+having count(*) >= 2
+
+-- Задача 5
+select
+    cl.client_fio
+from clients cl
+left join documents d
+on cl.client_id = d.client_id
+where d.client_id is null
+
+
+-------------------------------------------------------
+Задача №14
+-- решал выше
+
+-------------------------------------------------------
+Задача №15
+
+-- Задача 1 SQL
+select
+    date,
+    count(video_id) as views,
+    count(distinct user_id) as DAU
+from records
+group by date
+order by date
+
+-- Задача 2 SQL
+-- смотрел 1 и 3, но не 2
+select
+    v1.user_id
+from reports v1
+join reports v3 on v1.user_id = v3.user_id and v3.video_id=3
+left join reports v2 on v1.user_id = v2.user_id and v2.video_ud = 2
+where v1.video_id = 1
+and v2.video_id is null
+
+-- через having/sum
+select
+    user_id
+from reports
+where video_id between 1 and 3
+group by user_id
+having sum(video_id) = 4
+
+-- Задача 3 Python -- ДОРЕШАТЬ/ДОПОНЯТЬ
+def f(s):
+    i = 0
+    n = len(s)
+    res = ''
+    counter = 0
+
+    cur = ''
+    while i < n:
+        if s[i] == cur:
+            counter += 1
+        else:
+            res += cur
+            cur = s[i]
+
+            if counter > 1:
+                res += str(counter)
+
+            counter = 1
+
+        if i+1 == n:
+            res+=cur
+
+            if counter > 1:
+                res += str(counter)
+
+        i += 1
+
+    return res
+
+
+-------------------------------------------------------
+Задача №16
+
+-- Задача 1 SQL
+with events_per_week as (
+    select
+        date_trunc('week', hitTime) as week,
+        count(hitId) as event_count
+    from hits
+    group by date_trunc('week', hitTime))
+select
+    week,
+    event_count,
+    lag(event_count) over(order by week) as previous_event_count
+from events_per_week
+order by week
+
+-- Задача 2 Python
+def palidrom(s):
+    l = 0
+    r = len(s) - 1
+    
+    while l < r:
+        if s[l] == s[r]:
+            l+=1
+            r-=1
+        else:
+            return False
+    
+    return True
+
+
+-------------------------------------------------------
+Задача №17
+
+-- Задача 1 SQL
+-- Сколько на каждом тарифе (tariff) абонентов;
+select
+    tariff,
+    count(distinct abonent_id) as abonent_count
+from abnt
+group by tariff
+
+-- Задача 2 SQL
+-- Какой в разрезе тарифов средний размер начислений (all_clc) в мае’19;
+select
+    a.tariff,
+    avg(c.all_clc)
+from abnt a
+left join clcd c on c.abonent_id = a.abonent_id
+where date_trunc('month', c.table_business_month) = '2019-05-01'
+
+-- Вопрос по 2 задаче:
+-- p.s. используем left join, ибо мало ли будут абоненты, по которым не было транзакций
+-- даже если не было транзакций, зачем нам эта информация? мы же все ранво считаем среднюю по тем, у кого были транзакции
+
+
+-- Задача 3 SQL
+-- Какой в разрезе тарифов средний объём потребляемого трафика (data_traffic_GB) в апреле’19;
+select
+    a.tariff,
+    avg(t.data_traffic_GB)
+from abnt a
+left join traf t
+on a.abonent_id = t.abonent_id
+where date_trunc('month', t.table_business_month) = '2019-04-01'
+
+-- Задача 4 SQL
+-- Какое распределение абонентской базы по периоду активации (activation_date) – 
+-- здесь предлагаю разбить на 5 групп, определив эти группы по своему усмотрению.
+select
+    group,
+    count(*) as abonents_count
+from (
+    select
+        case
+            when current_date - activation_date <= interval '1 month' then '1 month'
+            when current_date - activation_date <= interval '90 days' then '1 quarter'
+            when current_date - activation_date <= interval '182 days' then '1 half year'
+            when current_date - activation_date <= interval '1 year' then '1 year'
+            else 'more then 1 year'
+        end as group
+    from abnt)
+group by group
+
+
+    
+-------------------------------------------------------
+Задача №19
+
+-- Задача 1 SQL
+select
+    date_trunc('day', o.order_date),
+    pl.name,
+    count(order_id) as orders_count
+from platforms pl
+left join orders o
+on o.platform = pl.platform
+where o.payment_day is not NULL
+group by date_trunc('day', o.order_date), pl.name
+
+-- Задача 2 SQL
+with t as (
+    select
+        experience_id,
+        count(order_id) as cnt
+    from orders
+    group by experience_id),
+    t2 as (
+    select
+        experience_id,
+        dense_rank() over(order by cnt desc) as rnk
+    from t)
+select
+    experience_id
+from t2
+where rnk between 1 and 3
+    
+-- Задача 3 SQL
+select
+    user_id
+from orders
+where order_status = 'Забронировано'
+group by user_id
+having count(order_id) > 1
+
+-------------------------------------------------------
+Задача №20
+
+-- Задача SQL
+with chiefs as (
+    select
+        id as chief_id,
+        department_id,
+        birth_dt
+    from employee
+    where chief_flg is True)
+select
+    e.id
+from employee e
+join chiefs ch
+on ch.department_id = e.department_id and ch.chief_id != e.id and e.birth_dt < ch.birth_dt
+
+
+select
+    e1.id
+from employee e1
+join employee e2
+on e1.department_id = e2.department_id
+and e1.chief_flg is False
+and e2.chief_flg is True
+and e1.birth_dt < e2.birth_dt
